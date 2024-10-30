@@ -29,7 +29,7 @@ return {
 				"pyright",
 				-- "golangci_lint_ls",
 				-- "gopls",
-				-- "intelephense",
+				"intelephense",
 			},
 			automatic_installation = true,
 		})
@@ -39,6 +39,7 @@ return {
 				"prettier", -- prettier formatter
 				"stylua", -- lua formatter
 				"eslint_d", -- js linter
+				"pylint", -- js linter
 			},
 		})
   end

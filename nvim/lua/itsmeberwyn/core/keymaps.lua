@@ -4,8 +4,9 @@ vim.g.mapleader = " "
 
 keymap.set("i", "jk", "<ESC>", { desc = "Exit insert mode with jk" })
 
-keymap.set("n", "k", "kzz", { desc = "keep center up" })
-keymap.set("n", "j", "jzz", { desc = "keep center bot" })
+-- set movement to always center
+-- keymap.set("n", "k", "kzz", { desc = "keep center up" })
+-- keymap.set("n", "j", "jzz", { desc = "keep center bot" })
 
 keymap.set("n", "<leader>nh", ":nohl<CR>", { desc = "Clear search highlights" })
 
