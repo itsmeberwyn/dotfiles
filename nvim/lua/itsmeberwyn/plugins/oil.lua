@@ -22,4 +22,7 @@ return {
 	end,
 }
 
-
+-- Top commands
+-- ctrl + l > refresh to get new files
+-- ctrl + p > to view file
+-- ctrl + c > to close
