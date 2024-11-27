@@ -10,6 +10,7 @@ return {
       { '<leader>fb', function() require('fzf-lua').buffers() end, desc = 'Buffers' },
       { '<leader>fh', function() require('fzf-lua').help_tags() end, desc = 'Help Tags' },
       { '<leader>fd', function() require('fzf-lua').diagnostics_workspace() end, desc = 'Workspace Diagnostics' },
+      { 'gd', function() require('fzf-lua').lsp_definitions({ jump_to_single_result = true }) end, desc = 'LSP Definitions' },
     },
     config = function()
       require('fzf-lua').setup({
