@@ -20,7 +20,14 @@ return {
             layout = 'flex',
             horizontal = 'right:60%',
             vertical = 'down:45%',
+            scroll = {
+              up = '<C-o>',   -- Customize to scroll up
+              down = '<C-d>', -- Customize to scroll down
+            },
           },
+        },
+        lsp = {
+          enable = true,
         },
         files = {
           prompt = 'Files❯ ',
@@ -39,6 +46,8 @@ return {
           builtin = {
             ['<F1>'] = 'toggle-help',
             ['<F2>'] = 'toggle-fullscreen',
+            ['<C-u>'] = 'preview-page-up',
+            ['<C-d>'] = 'preview-page-down'
           },
           fzf = {
             ['ctrl-q'] = 'select-all+accept',
