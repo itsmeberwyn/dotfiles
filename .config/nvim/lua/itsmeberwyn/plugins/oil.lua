@@ -22,4 +22,6 @@ return {
 	end,
 }
 
-
+-- C-p > preview
+-- C-l > refresh
+-- C-t > open on new tab
