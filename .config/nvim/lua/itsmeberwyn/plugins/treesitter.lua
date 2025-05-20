@@ -1,11 +1,11 @@
 return {
-	{
-		"nvim-treesitter/nvim-treesitter",
-		event = { "BufReadPre", "BufNewFile" },
+  {
+    "nvim-treesitter/nvim-treesitter",
+    event = { "BufReadPre", "BufNewFile" },
     build = ":TSUpdate",
-		dependencies = {
-			"windwp/nvim-ts-autotag",
-		},
+    dependencies = {
+      "windwp/nvim-ts-autotag",
+    },
     config = function()
       local treesitter = require("nvim-treesitter.configs")
       treesitter.setup({
@@ -16,25 +16,25 @@ return {
 
         indent = { enable = true },
 
-				autotag = {
-					enable = true,
-				},
+        autotag = {
+          enable = true,
+        },
 
         ensure_installed = {
-            "javascript", "typescript", "c", "lua",
-            "jsdoc", "bash", "go", "python", "php", 
-            "html", "angular"
+          "javascript", "typescript", "lua",
+          "jsdoc", "bash", "go", "python", "php",
+          "html", "tsx"
         },
 
         incremental_selection = {
-					enable = true,
-					keymaps = {
-						init_selection = "<C-space>",
-						node_incremental = "<C-space>",
-						scope_incremental = false,
-						node_decremental = "<bs>",
-					},
-				},
+          enable = true,
+          keymaps = {
+            init_selection = "<C-space>",
+            node_incremental = "<C-space>",
+            scope_incremental = false,
+            node_decremental = "<bs>",
+          },
+        },
 
       })
     end

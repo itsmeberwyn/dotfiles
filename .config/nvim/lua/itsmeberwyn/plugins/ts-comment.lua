@@ -1,10 +1,6 @@
 return {
   "folke/ts-comments.nvim",
-  opts = {
-    lang = {
-      jsdoc = "/** %s */",
-    },
-  },
+  opts = {},
   event = "VeryLazy",
-  enabled = true,
+  enabled = vim.fn.has("nvim-0.10.0") == 1,
 }
