@@ -34,3 +34,4 @@ keymap.set("v", "J", ":m '>+1<CR>gv=gv")
 keymap.set("v", "K", ":m '<-2<CR>gv=gv")
 
 keymap.set('n', '<leader>fr', "<cmd>lua require('fzf-lua').lsp_references()<CR>", { noremap = true, silent = true })
+keymap.set("n", "<leader>o", "<cmd>AerialToggle!<CR>")
