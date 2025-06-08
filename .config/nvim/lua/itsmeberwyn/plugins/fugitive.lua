@@ -8,6 +8,8 @@
 -- cc <- to go to the commit page
 -- Branches
 -- :G checkout -b <branch-name>
+--
+-- to exit from split do <C-w><C-o>
 return {
 	"tpope/vim-fugitive",
 	config = function()
