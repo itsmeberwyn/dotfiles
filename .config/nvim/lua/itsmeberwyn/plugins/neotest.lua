@@ -67,13 +67,13 @@ return {
 			end,
 			desc = "Toggle Summary (Neotest)",
 		},
-		{
-			"<leader>to",
-			function()
-				require("neotest").output.open({ enter = true, auto_close = true })
-			end,
-			desc = "Show Output (Neotest)",
-		},
+		-- {
+		-- 	"<leader>to",
+		-- 	function()
+		-- 		require("neotest").output.open({ enter = true, auto_close = true })
+		-- 	end,
+		-- 	desc = "Show Output (Neotest)",
+		-- },
 		{
 			"<leader>tO",
 			function()
