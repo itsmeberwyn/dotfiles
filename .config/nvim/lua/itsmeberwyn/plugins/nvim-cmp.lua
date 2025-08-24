@@ -19,10 +19,16 @@ return {
 		-- loads vscode style snippets from installed plugins (e.g. friendly-snippets)
 		require("luasnip.loaders.from_vscode").lazy_load()
 
+    local completionConfig = {
+      completeopt = "menu,menuone,preview,noselect",
+    }
+
+    if not ENV.ENABLE_AUTOCOMPLETION then
+      completionConfig.autocomplete = ENV.ENABLE_AUTOCOMPLETION
+    end
+
 		cmp.setup({
-			completion = {
-				completeopt = "menu,menuone,preview,noselect",
-			},
+			completion = completionConfig,
 			snippet = { -- configure how nvim-cmp interacts with snippet engine
 				expand = function(args)
 					luasnip.lsp_expand(args.body)
