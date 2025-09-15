@@ -1,0 +1,80 @@
+#!/bin/bash
+
+if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
+  echo "Not inside a Git repository."
+  return 1
+fi
+
+if ! [ -n "$TMUX" ]; then
+  echo "You are NOT inside tmux"
+  return 1
+fi
+
+# Get all worktrees
+worktrees=($(git worktree list | awk '{print $3}'))
+worktreesPath=($(git worktree list --porcelain | grep '^worktree ' | awk '{print $2}'))
+
+# Show them with numbers
+echo "Available worktrees:"
+for i in "${!worktrees[@]}"; do
+  echo "$((i+1)). ${worktrees[$i]}"
+done
+
+# Prompt user
+read -p "Select a worktree (1-${#worktrees[@]}): " choice
+
+# Validate input
+selected=""
+if [[ $choice -ge 1 && $choice -le ${#worktrees[@]} ]]; then
+  selected=${worktreesPath[$((choice-1))]}
+  # cd "$selected"
+else
+  echo "Invalid choice."
+fi
+
+# get current selected session
+currentSession=$(tmux display-message -p '#S')
+
+# get available windows
+windows=($(tmux list-windows -t "$currentSession" -F '#I:#W'))
+
+# loop through windows
+for window in "${windows[@]}"; do
+  index="${window%%:*}"   # part before ':'
+  name="${window#*:}"     # part after ':'
+  panes=($(tmux list-panes -t "$currentSession:$index" -F '#P'))
+
+  count=${#panes[@]}
+  # loop through panes
+  for pane in "${panes[@]}"; do
+    # check if there is more than one pane available
+    # in my workstation i do have window that has 2 pane dedicated on running the server
+    if [ "$count" -gt 1 ]; then
+      # this is dedicated to my work environment
+      # TODO: need to refactor
+      if [ "$pane" -eq 1 ] || [ "$pane" -eq 2 ]; then
+        if [ "$pane" -eq 1 ]; then
+          if [ -d "$selected$API_PATH" ]; then
+            tmux send-keys -t "$currentSession:$index.$pane" "cd $selected$API_PATH && clear && npm run dev" C-m
+            tmux send-keys -t "$currentSession:$index.$pane" "echo 'make sure to add environment variable to the .profile or .bashrc API_PATH'" C-m
+          else
+            tmux send-keys -t "$currentSession:$index.$pane" "cd $selected" C-m
+          fi
+        fi
+
+        if [ "$pane" -eq 2 ]; then
+          if [ -d "$selected$APP_PATH" ]; then
+            tmux send-keys -t "$currentSession:$index.$pane" "cd $selected$APP_PATH && clear && npm run dev" C-m
+            tmux send-keys -t "$currentSession:$index.$pane" "echo 'make sure to add environment variable to the .profile or .bashrc APP_PATH'" C-m
+          else
+            tmux send-keys -t "$currentSession:$index.$pane" "cd $selected" C-m
+          fi
+        fi
+      fi
+    else
+      # i go for the path for now, but we can refactor this, 
+      # that when i didnt encounter 2 panes, but im in window 2, still start the run command.
+      tmux send-keys -t "$currentSession:$index.$pane" "cd $selected" C-m
+    fi
+  done
+done
