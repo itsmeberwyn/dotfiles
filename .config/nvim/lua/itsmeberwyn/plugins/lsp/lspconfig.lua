@@ -124,30 +124,30 @@ return {
 		-- })
 
 		-- emmet_language_server
-		lspconfig.emmet_language_server.setup({
-			capabilities = capabilities,
-			filetypes = {
-				"css",
-				"html",
-				"javascript",
-				"javascriptreact",
-				"less",
-				"sass",
-				"scss",
-				"typescriptreact",
-			},
-			init_options = {
-				includeLanguages = {},
-				excludeLanguages = {},
-				extensionsPath = {},
-				preferences = {},
-				showAbbreviationSuggestions = true,
-				showExpandedAbbreviation = "always",
-				showSuggestionsAsSnippets = false,
-				syntaxProfiles = {},
-				variables = {},
-			},
-		})
+		-- lspconfig.emmet_language_server.setup({
+		-- 	capabilities = capabilities,
+		-- 	filetypes = {
+		-- 		"css",
+		-- 		"html",
+		-- 		"javascript",
+		-- 		"javascriptreact",
+		-- 		"less",
+		-- 		"sass",
+		-- 		"scss",
+		-- 		"typescriptreact",
+		-- 	},
+		-- 	init_options = {
+		-- 		includeLanguages = {},
+		-- 		excludeLanguages = {},
+		-- 		extensionsPath = {},
+		-- 		preferences = {},
+		-- 		showAbbreviationSuggestions = true,
+		-- 		showExpandedAbbreviation = "always",
+		-- 		showSuggestionsAsSnippets = false,
+		-- 		syntaxProfiles = {},
+		-- 		variables = {},
+		-- 	},
+		-- })
 
 		-- lspconfig.ts_ls.setup({
 		-- 	capabilities = capabilities,
