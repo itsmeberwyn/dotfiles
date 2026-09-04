@@ -1,0 +1,49 @@
+# ~/.devrc — the only place services are defined. Sourced by `dev` as plain bash,
+# so anything valid in bash is valid here. Copy it with `dev init`, then edit.
+#
+#   dev init            write this file to ~/.devrc
+#   DEVRC=./.devrc dev  use a different one (per-project sets)
+
+# ── Settings ────────────────────────────────────────────────────────────────
+DEV_ROOT=~/code/project             # base for relative dirs below   (default: $HOME)
+DEV_SESSION=dev                     # tmux session for the windows   (default: dev)
+DEV_CMD="pnpm dev"                  # used when an entry names none  (default: pnpm dev)
+DEV_LOG_DIR=~/.cache/dev-logs       # kept when a service is stopped (default: this)
+
+# ── Services ────────────────────────────────────────────────────────────────
+# One entry per service: "name port dir [command]"
+#
+#   name     <group>-<kind> earns free targets — `dev restart api` hits every *-api,
+#            `dev stop web` hits every web-*. Nothing to register.
+#   port     watched for up/down. Use "-" for something that listens on nothing;
+#            those report up while their tmux window is running a command.
+#   dir      absolute, ~/…, or relative to $DEV_ROOT
+#   command  everything after the dir. Optional, defaults to $DEV_CMD.
+#
+# Quotes inside a command survive: "api - . sh -c 'sleep 2; exec ./run'"
+
+SERVICES=(
+  # long-lived, has a port
+  "web-api  8000 services/api"
+  "web-app  3000 services/app"
+  "worker   8002 ~/other/worker go run ."
+
+  # long-lived, no port: watchers. Tracked by their tmux window.
+  "libs     -    . pnpm watch:libs"
+  "test-web -    services/app pnpm test:watch"
+)
+
+# Entries can also be appended, which is handy for grouping or commenting out:
+# SERVICES+=( "test-api - services/api pnpm test:watch" )
+
+# ── What does not belong here ───────────────────────────────────────────────
+# One-shot commands (a build, a single test run, a lint). The panel answers
+# "is this up?", which is meaningless for something that exits — a build would
+# read `booting` and then `dead`, with `dead` meaning success. Run those in a
+# terminal, or add a watch-mode entry above instead.
+
+# ── States you will see ─────────────────────────────────────────────────────
+#   ● up       something is listening (portless: its window is running a command)
+#   ◐ booting  window is running something, port not bound yet
+#   ✗ dead     window is there but idle: it crashed, or you stopped it by hand
+#   ○ down     no window at all

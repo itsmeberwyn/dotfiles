@@ -25,14 +25,17 @@ return {
 				"html",
 				"cssls",
 				"lua_ls",
-				"emmet_ls",
-				"emmet_language_server",
-				"pyright",
+				-- "emmet_ls",
+				-- "emmet_language_server",
+				-- "pyright",
 				-- "golangci_lint_ls",
 				-- "gopls",
-				"intelephense",
+				-- "intelephense",
 			},
-			automatic_installation = true,
+			-- Off on purpose: with this on, opening an unfamiliar filetype downloads and runs a
+			-- language server binary without asking. The list above still installs on startup;
+			-- anything else is a deliberate `:Mason` install.
+			automatic_installation = false,
 		})
 
 		mason_tool_installer.setup({
@@ -40,6 +43,9 @@ return {
 				"prettier", -- prettier formatter
 				"stylua", -- lua formatter
 				"eslint_d", -- js linter
+        "js-debug-adapter",
+        "netcoredbg",
+        "ruff",
 			},
 		})
 	end,

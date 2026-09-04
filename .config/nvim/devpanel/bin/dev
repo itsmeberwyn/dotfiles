@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# dev — start/stop/restart/kill dev servers. Each service = one tmux window.
+# Services are defined in ~/.devrc (or $DEVRC). This script knows nothing about them.
+set -uo pipefail
+
+DEVRC=${DEVRC:-$HOME/.devrc}
+HERE=$(dirname "$(readlink -f "$0")")
+
+# Defaults — a devrc may override any of these.
+DEV_ROOT=$HOME          # base for relative service dirs
+DEV_SESSION=dev         # tmux session holding the service windows
+DEV_CMD="pnpm dev"      # used when a service entry names no command
+DEV_LOG_DIR=${DEV_LOG_DIR:-$HOME/.cache/dev-logs}   # where output is kept after a service dies
+SERVICES=()             # "name port dir [command]" — port may be "-" for portless watchers
+
+cmd=${1:-status}; target=${2:-all}
+
+if [ "$cmd" = init ]; then
+  [ -f "$DEVRC" ] && { echo "$DEVRC already exists"; exit 1; }
+  cp "$HERE/../devrc.example" "$DEVRC" && echo "wrote $DEVRC — edit it, then run: dev"
+  exit
+fi
+
+[ -f "$DEVRC" ] && . "$DEVRC"
+[ ${#SERVICES[@]} -gt 0 ] || { echo "no services defined in $DEVRC (run: dev init)" >&2; exit 1; }
+
+names()   { for s in "${SERVICES[@]}"; do set -- $s; echo "$1"; done; }
+port_of() { local t=$1; for s in "${SERVICES[@]}"; do set -- $s; [ "$1" = "$t" ] && echo "$2"; done; }
+dir_of()  { local t=$1 d; for s in "${SERVICES[@]}"; do set -- $s; [ "$1" = "$t" ] || continue
+              d=${3/#\~/$HOME}; case $d in /*) echo "$d";; *) echo "$DEV_ROOT/$d";; esac; done; }
+cmd_of()  { local t=$1; for s in "${SERVICES[@]}"; do set -- $s; [ "$1" = "$t" ] || continue
+              shift 3; echo "${*:-$DEV_CMD}"; done; }
+
+# expand a target: all | exact name | any <group>- prefix | any -<kind> suffix
+expand() {
+  [ "$1" = all ] && { names; return; }
+  names | grep -xE "$1|$1-.*|.*-$1" || { echo "unknown target: $1" >&2; return 1; }
+}
+
+# One ss call per invocation instead of one per service, then match ports out of it.
+scan_ports() { PORTS=$(ss -ltnpH 2>/dev/null); }
+pid_on()  { awk -v p=":$1\$" '$4 ~ p { if (match($0, /pid=[0-9]+/)) { print substr($0, RSTART + 4, RLENGTH - 4); exit } }' <<<"$PORTS"; }
+
+# One tmux call per invocation instead of one per service: name -> shell pid for the session.
+scan_wins() { WINS=$(tmux list-panes -s -t "$DEV_SESSION" -F '#{window_name} #{pane_pid}' 2>/dev/null); }
+win_pid()   { awk -v n="$1" '$1 == n { print $2; exit }' <<<"$WINS"; }
+win_up()    { [ -n "$(win_pid "$1")" ]; }
+# Busy = the window's shell has a child. Idle = it is sitting at a prompt, so whatever ran
+# there has exited: a crash, or a Ctrl-C you did yourself.
+pane_busy() { local pp; pp=$(win_pid "$1"); [ -n "$pp" ] && pgrep -P "$pp" >/dev/null 2>&1; }
+scan_wins; scan_ports
+
+# Three states, because "window alive but port not bound yet" is the normal case while a slow
+# build compiles, and reporting it as down is a lie.
+#   up      something is listening (portless: its window is running something)
+#   booting its window is running something, nothing listening yet
+#   dead    its window is there but idle at a prompt — it crashed, or you stopped it by hand
+#   down    no window at all
+state_of() {
+  local p; p=$(port_of "$1")
+  if [ "$p" = "-" ]; then
+    win_up "$1" || { echo down; return; }
+    pane_busy "$1" && echo up || echo dead
+    return
+  fi
+  [ -n "$(pid_on "$p")" ] && { echo up; return; }
+  win_up "$1" || { echo down; return; }
+  pane_busy "$1" && echo booting || echo dead
+}
+
+# Keep the output of a service that is about to lose its window, so a stop or restart
+# does not take the reason it died with it.
+save_log() {
+  win_up "$1" || return 0
+  mkdir -p "$DEV_LOG_DIR"
+  {
+    tmux capture-pane -p -t "$DEV_SESSION:$1" -S -2000
+    echo
+    echo "── $1 stopped $(date '+%F %T') ──"
+  } > "$DEV_LOG_DIR/$1.log" 2>/dev/null
+}
+
+start() {
+  local n=$1 p dir st
+  p=$(port_of "$n"); dir=$(dir_of "$n")
+  [ -d "$dir" ] || { echo "$n: no such dir $dir" >&2; return 1; }
+  scan_wins; scan_ports
+  st=$(state_of "$n")
+  case $st in
+    up)      echo "$n already up (use restart)"; return ;;
+    booting) echo "$n already booting (use restart to force)"; return ;;
+  esac
+
+  # A window by this name already exists: a service that crashed, or a boot that stalled.
+  # tmux would create a *second* window with the same name and then every `-t session:name`
+  # lookup silently picks one of them, so replace it instead of stacking up duplicates.
+  if win_up "$n"; then
+    save_log "$n"
+    for _ in 1 2 3; do
+      win_up "$n" || break
+      tmux kill-window -t "$DEV_SESSION:$n" 2>/dev/null
+      scan_wins
+    done
+    win_up "$n" && { echo "$n: could not clear its old window" >&2; return 1; }
+    echo "$n replacing dead window"
+  fi
+
+  tmux has-session -t "$DEV_SESSION" 2>/dev/null || tmux new-session -d -s "$DEV_SESSION" -n scratch
+  tmux new-window -d -t "$DEV_SESSION" -n "$n" -c "$dir"
+  tmux send-keys -t "$DEV_SESSION:$n" "$(cmd_of "$n")" C-m
+  echo "$n starting"
+}
+
+stop() {
+  local n=$1 p
+  p=$(port_of "$n")
+  save_log "$n"
+  tmux kill-window -t "$DEV_SESSION:$n" 2>/dev/null
+  if [ "$p" != "-" ]; then
+    fuser -k -TERM "$p/tcp" 2>/dev/null && sleep 2
+    scan_ports
+    [ -n "$(pid_on "$p")" ] && fuser -k -KILL "$p/tcp" 2>/dev/null
+  fi
+  echo "$n stopped"
+}
+
+status() {
+  printf '%-9s %-5s %-8s %s\n' SERVICE PORT STATE PID
+  scan_wins; scan_ports
+  for n in $(names); do
+    local p pid=""
+    p=$(port_of "$n")
+    [ "$p" = "-" ] || pid=$(pid_on "$p")
+    printf '%-9s %-5s %-8s %s\n' "$n" "$p" "$(state_of "$n")" "${pid:--}"
+  done
+}
+
+case "$cmd" in
+  start|stop)     for n in $(expand "$target"); do $cmd "$n"; done ;;
+  restart)        for n in $(expand "$target"); do stop "$n"; start "$n"; done ;;
+  kill)           for n in $(expand "$target"); do
+                    p=$(port_of "$n")
+                    save_log "$n"
+                    [ "$p" = "-" ] && tmux kill-window -t "$DEV_SESSION:$n" 2>/dev/null \
+                                   || fuser -k -KILL "$p/tcp" 2>/dev/null
+                    echo "$n killed"
+                  done ;;
+  status|st)      status ;;
+  path|dir)       dir_of "$target"; [ -n "$(dir_of "$target")" ] ;;
+  port)           port_of "$target"; [ -n "$(port_of "$target")" ] ;;
+  tail)           if win_up "$target"; then
+                    tmux capture-pane -p -t "$DEV_SESSION:$target" -S -"${3:-200}"
+                  elif [ -f "$DEV_LOG_DIR/$target.log" ]; then
+                    tail -n "${3:-200}" "$DEV_LOG_DIR/$target.log"
+                  else
+                    echo "$target: no window in session $DEV_SESSION, no saved log"; exit 1
+                  fi ;;
+  logs|attach)    [ "$target" = all ] && target=$(names | head -1)
+                  if [ -n "${TMUX:-}" ]; then tmux switch-client -t "$DEV_SESSION:$target"
+                  else tmux attach -t "$DEV_SESSION:$target"; fi ;;
+  *) echo "usage: dev {start|stop|restart|kill|status|logs|tail|path|port|init} [all|<service>|<group>|<kind>]"
+     echo "services from $DEVRC: $(names | tr '\n' ' ')"; exit 1 ;;
+esac
