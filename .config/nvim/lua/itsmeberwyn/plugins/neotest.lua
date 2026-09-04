@@ -6,7 +6,7 @@ return {
 		"nvim-lua/plenary.nvim",
 		"antoinemadec/FixCursorHold.nvim",
 		"nvim-treesitter/nvim-treesitter",
-		"nvim-neotest/neotest-jest",
+		"marilari88/neotest-vitest",
 	},
 	config = function()
 		local status_ok, neotest = pcall(require, "neotest")
@@ -14,17 +14,56 @@ return {
 			return
 		end
 
-		local jest = require("neotest-jest")
+		-- Neotest reads test files from disk, and vim.filetype.match() cannot resolve a bare
+		-- ".ts" path without a buffer (the extension is ambiguous with Qt translation XML), so
+		-- discovery dies with "expected string, got nil" on every .ts test. Pin the extension.
+		vim.filetype.add({ extension = { ts = "typescript" } })
+
+		local vitest = require("neotest-vitest")
 
 		neotest.setup({
 			summary = {
 				open = "botright vsplit | vertical resize 80",
 			},
+			-- The defaults are Nerd Font private-use glyphs, which paint as blank in a font
+			-- that lacks them — the run works but looks like nothing happened.
+			icons = {
+				passed = "✓",
+				failed = "✗",
+				running = "●",
+				skipped = "○",
+				unknown = "?",
+				running_animated = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" },
+			},
+			-- Up-front discovery walks every file under the project root, and when nvim is
+			-- started outside a project that root becomes the cwd — from ~/workstation that is
+			-- 100k+ positions and the run queues behind the scan. Discover on demand instead:
+			-- files you open or run get parsed, nothing else.
+			discovery = {
+				enabled = false,
+				concurrent = 0,
+			},
+
+			-- Signs alone are easy to miss; virtual text puts the result on the test line.
+			status = {
+				enabled = true,
+				signs = true,
+				virtual_text = true,
+			},
 			adapters = {
-				jest({
-					jestCommand = "npm run test",
-					cwd = function(path)
-						return vim.fn.getcwd()
+				vitest({
+					vitestCommand = "pnpm exec vitest",
+					-- Run from the package that owns the test, not the monorepo root:
+					-- rooted at the repo, a single-file run fires the whole turbo suite.
+					cwd = function(file)
+						return vim.fs.root(file, {
+							"vitest.config.mts",
+							"vitest.config.ts",
+							"vitest.config.js",
+						}) or vim.fs.root(file, "package.json")
+					end,
+					filter_dir = function(name)
+						return name ~= "node_modules" and name ~= ".next" and name ~= "dist"
 					end,
 				}),
 			},
