@@ -44,6 +44,13 @@ return {
 				concurrent = 0,
 			},
 
+			-- Failures become buffer diagnostics, so ]d, :Trouble and the quickfix list all
+			-- reach the message without opening a float at all.
+			diagnostic = {
+				enabled = true,
+				severity = vim.diagnostic.severity.ERROR,
+			},
+
 			-- Signs alone are easy to miss; virtual text puts the result on the test line.
 			status = {
 				enabled = true,
@@ -106,13 +113,15 @@ return {
 			end,
 			desc = "Toggle Summary (Neotest)",
 		},
-		-- {
-		-- 	"<leader>to",
-		-- 	function()
-		-- 		require("neotest").output.open({ enter = true, auto_close = true })
-		-- 	end,
-		-- 	desc = "Show Output (Neotest)",
-		-- },
+		{
+			"<leader>to",
+			function()
+				-- enter = true focuses the float so the failure text can be yanked;
+				-- the one that pops up automatically on failure is not focusable.
+				require("neotest").output.open({ enter = true, auto_close = true })
+			end,
+			desc = "Show Output (Neotest)",
+		},
 		{
 			"<leader>tO",
 			function()
