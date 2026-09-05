@@ -28,8 +28,8 @@ return {
 				"emmet_ls",
 				"emmet_language_server",
 				"pyright",
-				-- "golangci_lint_ls",
-				-- "gopls",
+				"golangci_lint_ls",
+				"gopls",
 				"intelephense",
 			},
 			automatic_installation = true,
@@ -40,6 +40,7 @@ return {
 				"prettier", -- prettier formatter
 				"stylua", -- lua formatter
 				"eslint_d", -- js linter
+        "ruff", -- python formatter
 			},
 		})
 	end,

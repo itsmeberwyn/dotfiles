@@ -15,6 +15,14 @@ return {
 				yaml = { "prettier" },
 				markdown = { "prettier" },
 				lua = { "stylua" },
+				python = { "ruff_fix", "ruff_organize_imports", "ruff_format" },
+			},
+			formatters = {
+				ruff_format = {
+					prepend_args = function()
+						return { "format", "--line-length", tostring(vim.bo.textwidth > 0 and vim.bo.textwidth or 80) }
+					end,
+				},
 			},
 			-- format_on_save = {
 			-- 	lsp_fallback = true,

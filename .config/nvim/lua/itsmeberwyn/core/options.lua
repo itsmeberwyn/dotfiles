@@ -30,4 +30,5 @@ opt.splitbelow = true
 
 opt.swapfile = false
 
-opt.colorcolumn = "120"
+opt.textwidth = 120
+opt.colorcolumn = "+0"
